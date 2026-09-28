@@ -1,0 +1,132 @@
+cff-version: 1.2.0
+title: linx_cobaya
+message: >-
+  If you use this software, please cite it together with LINX, Cobaya, and
+  whichever Boltzmann code you ran (CAMB or CLASS). See references below.
+type: software
+authors:
+  - family-names: Lodha
+    given-names: Kushal
+    email: klodha@bu.edu
+    affiliation: Boston University
+repository-code: https://github.com/Kushallodha/linx_cobaya
+abstract: >-
+  A Cobaya Theory component that replaces a Boltzmann code's static BBN
+  interpolation table with a live LINX nuclear-network solve, supplying YHe and
+  the final N_eff to CAMB or CLASS as input parameters and Y_p and D/H to a BBN
+  abundance likelihood.
+license: MIT
+keywords:
+  - cosmology
+  - big bang nucleosynthesis
+  - cosmic microwave background
+  - Bayesian inference
+references:
+  - type: article
+    title: Fast, differentiable, and extensible big bang nucleosynthesis package
+    authors:
+      - family-names: Giovanetti
+        given-names: Cara
+      - family-names: Lisanti
+        given-names: Mariangela
+      - family-names: Liu
+        given-names: Hongwan
+      - family-names: Mishra-Sharma
+        given-names: Siddharth
+      - family-names: Ruderman
+        given-names: Joshua T.
+    journal: Physical Review D
+    volume: 112
+    issue: 6
+    year: 2025
+    doi: 10.1103/f3tj-r882
+    notes: LINX, the BBN code this package wraps.
+  - type: article
+    title: "Cobaya: Code for Bayesian Analysis of hierarchical physical models"
+    authors:
+      - family-names: Torrado
+        given-names: Jesus
+      - family-names: Lewis
+        given-names: Antony
+    journal: JCAP
+    volume: "05"
+    start: "057"
+    year: 2021
+    doi: 10.1088/1475-7516/2021/05/057
+    notes: The sampling framework.
+  - type: article
+    title: "Efficient computation of CMB anisotropies in closed FRW models"
+    authors:
+      - family-names: Lewis
+        given-names: Antony
+      - family-names: Challinor
+        given-names: Anthony
+      - family-names: Lasenby
+        given-names: Anthony
+    journal: The Astrophysical Journal
+    volume: 538
+    start: 473
+    year: 2000
+    doi: 10.1086/309179
+    notes: CAMB.
+  - type: article
+    title: >-
+      The Cosmic Linear Anisotropy Solving System (CLASS) II: Approximation
+      schemes
+    authors:
+      - family-names: Blas
+        given-names: Diego
+      - family-names: Lesgourgues
+        given-names: Julien
+      - family-names: Tram
+        given-names: Thomas
+    journal: JCAP
+    volume: "07"
+    start: "034"
+    year: 2011
+    doi: 10.1088/1475-7516/2011/07/034
+    notes: CLASS.
+  - type: article
+    title: One Percent Determination of the Primordial Deuterium Abundance
+    authors:
+      - family-names: Cooke
+        given-names: Ryan J.
+      - family-names: Pettini
+        given-names: Max
+      - family-names: Steidel
+        given-names: Charles C.
+    journal: The Astrophysical Journal
+    volume: 855
+    issue: 2
+    year: 2018
+    doi: 10.3847/1538-4357/aaab53
+    notes: Default D/H measurement in BBNAbundances.
+  - type: article
+    title: >-
+      The LBT Y_p Project IV: A New Value of the Primordial Helium Abundance
+    authors:
+      - family-names: Aver
+        given-names: Erik
+      - family-names: Skillman
+        given-names: Evan D.
+      - family-names: Pogge
+        given-names: Richard W.
+      - family-names: Rogers
+        given-names: Noah S. J.
+      - family-names: Weller
+        given-names: Miqaela K.
+      - family-names: Olive
+        given-names: Keith A.
+      - family-names: Berg
+        given-names: Danielle A.
+      - family-names: Salzer
+        given-names: John J.
+      - family-names: Miller
+        given-names: John H.
+      - family-names: Méndez-Delgado
+        given-names: José Eduardo
+    year: 2026
+    identifiers:
+      - type: other
+        value: arXiv:2601.22238
+    notes: Default Y_p measurement in BBNAbundances.

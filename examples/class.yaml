@@ -1,0 +1,234 @@
+# Change python_path, linx_path and packages_path.
+
+output: chains/Planck2018_BBN_class
+
+packages_path: /path/to/cobaya_packages
+
+theory:
+  linx_cobaya.linx_bbn.LinxBBN:
+    python_path: /path/to/linx_cobaya
+    linx_path: /path/to/LINX
+    nuclear_net: key_PRIMAT_2023
+    dNeff_convention: init
+    sample_nuclear: true
+    provide_nnu: true
+    nur_shift: 1.0132
+    provides: [YHe, Y_p, DH, nnu, Neff_BBN, N_ur]
+    stop_at_error: false
+
+  classy:
+    requires: [YHe, N_ur]
+    stop_at_error: false
+    extra_args:
+      N_ncdm: 1
+      T_ncdm: 0.71611
+      m_ncdm: 0.06
+
+likelihood:
+  linx_cobaya.bbn_likelihood.BBNAbundances:
+    python_path: /path/to/linx_cobaya
+    use_DH: true
+    use_Yp: true
+    DH_mean: 2.527e-5
+    DH_std: 0.030e-5
+    Yp_mean: 0.2458
+    Yp_std: 0.0013
+    DH_theory_std: 0.0
+    Yp_theory_std: 0.0
+
+  planck_2018_highl_plik.TTTEEE:
+  planck_2018_lowl.TT:
+  planck_2018_lowl.EE:
+
+params:
+  logA:
+    prior:
+      min: 2.30
+      max: 3.40
+    ref:
+      dist: norm
+      loc: 3.0428
+      scale: 0.0032
+    proposal: 0.0080
+    latex: \log(10^{10} A_\mathrm{s})
+    drop: true
+  As:
+    value: 'lambda logA: 1e-10*np.exp(logA)'
+    latex: A_\mathrm{s}
+
+  ns:
+    prior:
+      min: 0.85
+      max: 1.0
+    ref:
+      dist: norm
+      loc: 0.9695
+      scale: 0.00081
+    proposal: 0.0020
+    latex: n_\mathrm{s}
+
+  ombh2:
+    prior:
+      min: 0.019
+      max: 0.025
+    ref:
+      dist: norm
+      loc: 0.02238
+      scale: 0.000025
+    proposal: 0.000064
+    latex: \Omega_\mathrm{b} h^2
+
+  omegam:
+    prior:
+      min: 0.01
+      max: 0.99
+    ref:
+      dist: norm
+      loc: 0.3017
+      scale: 0.00076
+    proposal: 0.0019
+    latex: \Omega_\mathrm{m}
+
+  H0:
+    prior:
+      min: 20
+      max: 100
+    ref:
+      dist: norm
+      loc: 68.38
+      scale: 0.11
+    proposal: 0.27
+    latex: H_0
+
+  tau:
+    prior:
+      min: 0.025
+      max: 0.09
+    ref:
+      dist: norm
+      loc: 0.05672
+      scale: 0.0015
+    proposal: 0.0038
+    latex: \tau_\mathrm{reio}
+
+  omch2:
+    value: 'lambda omegam, H0, ombh2: omegam*(H0/100.)**2 - ombh2 - 0.06/93.14'
+    derived: false
+    latex: \Omega_\mathrm{c} h^2
+
+  dNeff:
+    prior:
+      min: -7
+      max: 7
+    ref:
+      dist: norm
+      loc: 0.075
+      scale: 0.057
+    proposal: 0.14
+    latex: \Delta N_\mathrm{eff}^\mathrm{(init)}
+
+  tau_n_fac:
+    prior:
+      dist: norm
+      loc: 1.0
+      scale: 0.000682
+    ref:
+      dist: norm
+      loc: 0.99996
+      scale: 0.00013
+    proposal: 0.00033
+    latex: \tau_n / \tau_n^{(0)}
+
+  q_npdg:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.244, scale: 0.19}
+    proposal: 0.48
+    latex: q_\mathrm{npdg}
+  q_dpHe3g:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.918, scale: 0.18}
+    proposal: 0.44
+    latex: q_\mathrm{dpHe3g}
+  q_ddHe3n:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.714, scale: 0.18}
+    proposal: 0.46
+    latex: q_\mathrm{ddHe3n}
+  q_ddtp:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.634, scale: 0.19}
+    proposal: 0.47
+    latex: q_\mathrm{ddtp}
+  q_tpag:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: 0.134, scale: 0.19}
+    proposal: 0.48
+    latex: q_\mathrm{tpag}
+  q_tdan:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: 0.013, scale: 0.19}
+    proposal: 0.48
+    latex: q_\mathrm{tdan}
+  q_taLi7g:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.001, scale: 0.20}
+    proposal: 0.49
+    latex: q_\mathrm{taLi7g}
+  q_He3ntp:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.024, scale: 0.19}
+    proposal: 0.48
+    latex: q_\mathrm{He3ntp}
+  q_He3dap:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: 0.006, scale: 0.19}
+    proposal: 0.48
+    latex: q_\mathrm{He3dap}
+  q_He3aBe7g:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.071, scale: 0.19}
+    proposal: 0.47
+    latex: q_\mathrm{He3aBe7g}
+  q_Be7nLi7p:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: -0.027, scale: 0.19}
+    proposal: 0.49
+    latex: q_\mathrm{Be7nLi7p}
+  q_Li7paa:
+    prior: {dist: norm, loc: 0.0, scale: 1.0}
+    ref: {dist: norm, loc: 0.014, scale: 0.19}
+    proposal: 0.48
+    latex: q_\mathrm{Li7paa}
+
+  YHe:
+    latex: Y_\mathrm{P}
+  Y_p:
+    latex: Y_P^\mathrm{BBN}
+  DH:
+    latex: \mathrm{D}/\mathrm{H}
+  DHBBN:
+    derived: 'lambda DH: 10**5*DH'
+    latex: 10^5 \mathrm{D}/\mathrm{H}
+  nnu:
+    latex: N_\mathrm{eff}
+  N_ur:
+    latex: N_\mathrm{ur}
+  Neff_BBN:
+    latex: N_\mathrm{eff}^\mathrm{BBN}
+  h:
+    derived: 'lambda H0: H0/100.'
+    latex: h
+  sigma8:
+    latex: \sigma_8
+  rdrag:
+    latex: r_\mathrm{drag}
+
+sampler:
+  mcmc:
+    drag: true
+    oversample_power: 0.4
+    proposal_scale: 1.9
+    learn_proposal: true
+    max_tries: 10000
+    Rminus1_stop: 0.01
+    Rminus1_cl_stop: 0.2
