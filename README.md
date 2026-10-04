@@ -71,22 +71,30 @@ takes about a minute.
 
 ## What the code fixes
 
-`dNeff_convention` defaults to `"final"`: the sampled `dNeff` is the
-post-annihilation ΔN_eff used in the CMB literature. LINX's native input is
-ΔN_eff at the start of the integration (T ≈ 8.6 MeV). `"init"` passes that 
-native parameter through and logs a warning. Either way `Neff_BBN` is the 
-value LINX produced and the Boltzmann code received.
+`dNeff_convention` defaults to `"init"`: the sampled `dNeff` is LINX's native
+ΔN_eff at the start of the integration (T ≈ 8.6 MeV), passed through directly.
+Set `dNeff_convention: final` to sample the post-annihilation ΔN_eff instead;
+the wrapper converts it using a slope calibrated at startup. Either way
+`Neff_BBN` is the value LINX produced and the Boltzmann code received.
 
 `Y_p` from LINX is the helium nucleon fraction. `YHe` is the mass fraction,
 converted with `camb.bbn.ypBBN_to_yhe`.
 
-Solver failures return NaN and `calculate` returns `False` (zero likelihood).
+Non-finite predictions make `calculate` return `False` (zero likelihood).
 
 `warmup: true` runs one LINX solve in `initialize()` so the XLA compile happens
 at startup. With `dNeff_convention: "final"` that solve runs anyway, because
 the slope calibration needs a compiled model.
 
-Nuclear-rate nuisances and `tau_n` stay fixed unless `sample_nuclear: true`.
+`sample_nuclear` defaults to `true`. Cobaya automatically adds `tau_n_fac`
+with a Gaussian prior of mean 1 and standard deviation 0.000682, and one
+`q_<reaction>` per reaction in the selected `nuclear_net`, each with a
+standard normal prior. You can override these priors, reference values, or
+proposal widths in the run's `params` block, as with Planck nuisances.
+Set `sample_nuclear: false` to keep `tau_n_fac=1` and all reaction shifts at zero.
+
+The prior widths follow `LINX/scripts/CMB_BBN_marg_nuisance_omegab_Neff.py`.
+The `ref` and `proposal` widths are sampler tuning.
 
 `Y_p` and `D/H` use species indices looked up by name in LINX's `species_dict`.
 Helium-4 is `"a"`.
@@ -105,7 +113,7 @@ underlying codes, which did the actual physics.
   [JCAP 05 (2021) 057](https://doi.org/10.1088/1475-7516/2021/05/057),
   [arXiv:2005.05290](https://arxiv.org/abs/2005.05290)
 
-**Whichever Boltzmann code you ran:**
+**Boltzmann codes:**
 
 - **CAMB** — Lewis, Challinor & Lasenby,
   [ApJ 538, 473 (2000)](https://doi.org/10.1086/309179),

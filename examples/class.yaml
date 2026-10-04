@@ -78,7 +78,7 @@ params:
     proposal: 0.000064
     latex: \Omega_\mathrm{b} h^2
 
-  omegam:
+  Omega_m:
     prior:
       min: 0.01
       max: 0.99
@@ -111,10 +111,11 @@ params:
     proposal: 0.0038
     latex: \tau_\mathrm{reio}
 
-  omch2:
-    value: 'lambda omegam, H0, ombh2: omegam*(H0/100.)**2 - ombh2 - 0.06/93.14'
+  # LinxBBN claims ombh2, so CLASS never sees it; hand it over as omega_b.
+  omega_b:
+    value: 'lambda ombh2: ombh2'
     derived: false
-    latex: \Omega_\mathrm{c} h^2
+    latex: \omega_\mathrm{b}
 
   dNeff:
     prior:
@@ -127,78 +128,7 @@ params:
     proposal: 0.14
     latex: \Delta N_\mathrm{eff}^\mathrm{(init)}
 
-  tau_n_fac:
-    prior:
-      dist: norm
-      loc: 1.0
-      scale: 0.000682
-    ref:
-      dist: norm
-      loc: 0.99996
-      scale: 0.00013
-    proposal: 0.00033
-    latex: \tau_n / \tau_n^{(0)}
-
-  q_npdg:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.244, scale: 0.19}
-    proposal: 0.48
-    latex: q_\mathrm{npdg}
-  q_dpHe3g:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.918, scale: 0.18}
-    proposal: 0.44
-    latex: q_\mathrm{dpHe3g}
-  q_ddHe3n:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.714, scale: 0.18}
-    proposal: 0.46
-    latex: q_\mathrm{ddHe3n}
-  q_ddtp:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.634, scale: 0.19}
-    proposal: 0.47
-    latex: q_\mathrm{ddtp}
-  q_tpag:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: 0.134, scale: 0.19}
-    proposal: 0.48
-    latex: q_\mathrm{tpag}
-  q_tdan:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: 0.013, scale: 0.19}
-    proposal: 0.48
-    latex: q_\mathrm{tdan}
-  q_taLi7g:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.001, scale: 0.20}
-    proposal: 0.49
-    latex: q_\mathrm{taLi7g}
-  q_He3ntp:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.024, scale: 0.19}
-    proposal: 0.48
-    latex: q_\mathrm{He3ntp}
-  q_He3dap:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: 0.006, scale: 0.19}
-    proposal: 0.48
-    latex: q_\mathrm{He3dap}
-  q_He3aBe7g:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.071, scale: 0.19}
-    proposal: 0.47
-    latex: q_\mathrm{He3aBe7g}
-  q_Be7nLi7p:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: -0.027, scale: 0.19}
-    proposal: 0.49
-    latex: q_\mathrm{Be7nLi7p}
-  q_Li7paa:
-    prior: {dist: norm, loc: 0.0, scale: 1.0}
-    ref: {dist: norm, loc: 0.014, scale: 0.19}
-    proposal: 0.48
-    latex: q_\mathrm{Li7paa}
+  # Nuclear nuisance parameters and priors come from LinxBBN.
 
   YHe:
     latex: Y_\mathrm{P}

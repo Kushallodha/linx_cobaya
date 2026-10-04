@@ -19,25 +19,20 @@ import numpy as np
 from cobaya.theory import Theory
 
 # LINX SM reference values (key_PRIMAT_2023, ombh2 = 0.02242, dNeff = 0),
-# used only for the warm-up call and by check_linx_cobaya.py.
+# used only for the warm-up call.
 FIDUCIAL_OMBH2 = 0.02242
 
-# Reaction order for LINX key_* networks (see nuclear.py populate()).
-# Used so Cobaya can see param names before LINX finishes initializing.
-KEY_NETWORK_Q_PARAMS = [
-    "q_npdg",
-    "q_dpHe3g",
-    "q_ddHe3n",
-    "q_ddtp",
-    "q_tpag",
-    "q_tdan",
-    "q_taLi7g",
-    "q_He3ntp",
-    "q_He3dap",
-    "q_He3aBe7g",
-    "q_Be7nLi7p",
-    "q_Li7paa",
-]
+
+def _add_linx_path(linx_path):
+    if linx_path:
+        linx_path = os.path.abspath(os.path.expanduser(linx_path))
+        if not os.path.isdir(os.path.join(linx_path, "linx")):
+            raise ValueError(
+                f"linx_path={linx_path!r} does not contain a 'linx' package "
+                "directory. It should point at the root of the LINX repository."
+            )
+        if linx_path not in sys.path:
+            sys.path.insert(0, linx_path)
 
 
 class LinxBBN(Theory):
@@ -61,26 +56,26 @@ class LinxBBN(Theory):
     dNeff : extra effective number of neutrino species. Its meaning is set by
         ``dNeff_convention``; see below.
     tau_n_fac, q_<reaction> : optional nuclear nuisances when
-        ``sample_nuclear`` is True. Priors are set in the YAML, not here; the
-        values used in LINX/scripts/CMB_BBN_marg_nuisance_omegab_Neff.py are
-        tau_n ~ N(1, 0.000682) and each q ~ N(0, 1).
+        ``sample_nuclear`` is True. LinxBBN adds default priors for these, one
+        q per reaction in ``nuclear_net``: tau_n_fac ~ N(1, 0.000682) and each
+        q ~ N(0, 1). Override them in the run's params block.
 
     The dNeff convention
     --------------------
     LINX's native input ``Delt_Neff_init`` is Delta N_eff at the *start* of the
     integration (T ~ 8.6 MeV), i.e. before e+e- annihilation. The extra
     radiation then redshifts as a^-4 while the photons are heated by e+e-
-    annihilation, so by the end it has diluted by the entropy-transfer factor:
+    annihilation, so the final Delta N_eff is smaller than the value passed in
+    by the entropy-transfer factor.
 
-        Delta N_eff(final) ~= 0.2718 * Delt_Neff_init
+    This class defaults to ``dNeff_convention="init"``: the sampled ``dNeff``
+    is that native pre-e+e- parameter, passed straight through.
 
-    measured to be linear to 0.2% over Delt_Neff_init in [-0.5, 2].
-
-    "Delta N_eff" in the CMB literature means the *final* value, so this class
-    defaults to ``dNeff_convention="final"``: the sampled ``dNeff`` is the final
-    value, and the class converts to LINX's native input using a slope
-    calibrated once at initialization. Set ``dNeff_convention="init"`` to pass
-    LINX's native parameter straight through.
+    Set ``dNeff_convention="final"`` to sample Delta N_eff in the post-e+e-
+    sense the CMB literature uses instead. The class then converts to LINX's
+    native input by dividing by a slope ``d(Neff_final) / d(Delt_Neff_init)``.
+    The slope is measured at startup from background solves at
+    ``Delt_Neff_init`` = 0 and 1.
 
     Either way ``Neff_BBN`` reports the value LINX actually produced and that
     the Boltzmann code actually receives, so the two codes are never
@@ -102,12 +97,42 @@ class LinxBBN(Theory):
     # N_ur = Neff_BBN - nur_shift. 1.0132 is one massive neutrino at
     # T_ncdm = 0.71611 (CLASS explanatory.ini).
     nur_shift: float = 1.0132
-    # Startup solve is skipped only when warmup is false and dNeff_convention is "init".
     warmup: bool = True
-    dNeff_convention: str = "final"
+    dNeff_convention: str = "init"
     # If True, sample tau_n_fac and one q_<reaction> per network rate, the same
     # marginalisation as LINX/scripts/CMB_BBN_marg_nuisance_omegab_Neff.py.
-    sample_nuclear: bool = False
+    sample_nuclear: bool = True
+
+    @classmethod
+    def _network_q_params(cls, nuclear_net, linx_path):
+        _add_linx_path(linx_path)
+        from linx.nuclear import NuclearRates
+
+        rates = NuclearRates(nuclear_net=nuclear_net)
+        return [f"q_{rxn.name}" for rxn in rates.reactions]
+
+    @classmethod
+    def get_modified_defaults(cls, defaults, input_options=None):
+        """Supply network nuisance priors before Cobaya builds its parameterization."""
+        options = {**defaults, **(input_options or {})}
+        if not options["sample_nuclear"]:
+            return defaults
+        q_names = cls._network_q_params(options["nuclear_net"], options["linx_path"])
+        params = defaults.setdefault("params", {})
+        params["tau_n_fac"] = {
+            "prior": {"dist": "norm", "loc": 1.0, "scale": 0.000682},
+            "ref": {"dist": "norm", "loc": 1.0, "scale": 0.00013},
+            "proposal": 0.00033,
+            "latex": r"\tau_n / \tau_n^{(0)}",
+        }
+        for name in q_names:
+            params[name] = {
+                "prior": {"dist": "norm", "loc": 0.0, "scale": 1.0},
+                "ref": {"dist": "norm", "loc": 0.0, "scale": 0.2},
+                "proposal": 0.5,
+                "latex": r"q_\mathrm{" + name[2:] + "}",
+            }
+        return defaults
 
     def initialize(self):
         if self.dNeff_convention not in ("final", "init"):
@@ -115,15 +140,7 @@ class LinxBBN(Theory):
                 f"dNeff_convention must be 'final' or 'init', "
                 f"not {self.dNeff_convention!r}."
             )
-        if self.linx_path:
-            linx_path = os.path.abspath(os.path.expanduser(self.linx_path))
-            if not os.path.isdir(os.path.join(linx_path, "linx")):
-                raise ValueError(
-                    f"linx_path={linx_path!r} does not contain a 'linx' package "
-                    "directory. It should point at the root of the LINX repository."
-                )
-            if linx_path not in sys.path:
-                sys.path.insert(0, linx_path)
+        _add_linx_path(self.linx_path)
 
         # NB: importing any LINX module enables JAX x64 globally (linx/const.py:3).
         import jax.numpy as jnp
@@ -142,8 +159,8 @@ class LinxBBN(Theory):
         self._linx = linx
         self._ypBBN_to_yhe = ypBBN_to_yhe
 
-        # throw=False so that solver failures return NaN (-> zero likelihood)
-        # rather than raising and killing the chain.
+        # throw=False: a failed solve returns NaN, which calculate() turns into
+        # zero likelihood instead of killing the chain.
         self._bkg = BackgroundModel(throw=False, max_steps=self.bkg_max_steps)
         self._abd = AbundanceModel(
             NuclearRates(nuclear_net=self.nuclear_net), throw=False
@@ -151,17 +168,11 @@ class LinxBBN(Theory):
 
         # Fixed-shape zero nuisance vector when not sampling. Always pass an
         # array (not None) so the jitted AbundanceModel path stays stable.
-        self._n_reactions = len(self._abd.nuclear_net.reactions)
-        self._q0 = jnp.zeros(self._n_reactions)
         self._q_param_names = [
             f"q_{rxn.name}" for rxn in self._abd.nuclear_net.reactions
         ]
-        if self.sample_nuclear and str(self.nuclear_net).startswith("key_"):
-            if self._q_param_names != list(KEY_NETWORK_Q_PARAMS):
-                raise RuntimeError(
-                    "LINX key-network reaction order changed; update "
-                    f"KEY_NETWORK_Q_PARAMS. Got {self._q_param_names}."
-                )
+        self._n_reactions = len(self._q_param_names)
+        self._q0 = jnp.zeros(self._n_reactions)
 
         # Indices from species_dict. Helium-4 is "a".
         species_by_name = {
@@ -191,7 +202,7 @@ class LinxBBN(Theory):
             "LINX network %r: %d reactions, %d species.%s",
             self.nuclear_net,
             self._n_reactions,
-            self._abd.nuclear_net.max_i_species,
+            n_species,
             (
                 " Sampling tau_n_fac + " + ", ".join(self._q_param_names) + "."
                 if self.sample_nuclear
@@ -212,9 +223,7 @@ class LinxBBN(Theory):
             )
 
         if self.warmup or self.dNeff_convention == "final":
-            # Front-load the XLA compile (~1 min) into initialisation rather
-            # than the first likelihood evaluation, and fail loudly here if
-            # LINX is broken. LINX prints a banner at trace time; swallow it.
+            # Compile at startup and suppress LINX's trace-time banner.
             self.log.info("Compiling LINX (this takes ~1 minute)...")
             with contextlib.redirect_stdout(io.StringIO()):
                 res = self._compute(FIDUCIAL_OMBH2, 0.0, _raw_dNeff=True)
@@ -229,9 +238,7 @@ class LinxBBN(Theory):
             )
 
         if self.dNeff_convention == "final":
-            # One extra background solve to get the slope. The map is linear to
-            # 0.2% over Delt_Neff_init in [-0.5, 2], so a two-point fit is
-            # ample -- and Neff_BBN reports the realised value regardless.
+            # Estimate the conversion slope from background solves at 0 and 1.
             with contextlib.redirect_stdout(io.StringIO()):
                 _, _, _, _, _, _, Neff_vec = self._bkg(self._jnp.asarray(1.0))
             self._dNeff_slope = float(Neff_vec[-1]) - self._Neff_sm
@@ -242,11 +249,11 @@ class LinxBBN(Theory):
                 self._Neff_sm,
             )
         else:
-            self.log.warning(
+            self.log.info(
                 "dNeff_convention='init': the sampled dNeff is LINX's native "
-                "pre-e+e--annihilation parameter, which dilutes by ~0.272 "
-                "before reaching the Boltzmann code. Check your prior range is "
-                "what you mean."
+                "pre-e+e--annihilation parameter, so the final Delta N_eff "
+                "reaching the Boltzmann code is smaller by the entropy-transfer "
+                "factor. Check your prior range is what you mean."
             )
 
     # --- parameter plumbing ----------------------------------------------
@@ -254,18 +261,7 @@ class LinxBBN(Theory):
     def get_can_support_params(self):
         params = ["ombh2", "dNeff"]
         if self.sample_nuclear:
-            params.append("tau_n_fac")
-            q_names = getattr(self, "_q_param_names", None)
-            if q_names is None:
-                if str(self.nuclear_net).startswith("key_"):
-                    q_names = KEY_NETWORK_Q_PARAMS
-                else:
-                    raise ValueError(
-                        "sample_nuclear=True requires a key_* nuclear_net "
-                        f"(got {self.nuclear_net!r}) so q_* names are known "
-                        "before LINX initializes."
-                    )
-            params.extend(q_names)
+            params += ["tau_n_fac", *self._q_param_names]
         return params
 
     def get_can_provide_params(self):
@@ -303,7 +299,7 @@ class LinxBBN(Theory):
         if nuclear_rates_q is None:
             nuclear_rates_q = self._q0
         else:
-            nuclear_rates_q = jnp.asarray(nuclear_rates_q)
+            nuclear_rates_q = jnp.asarray(nuclear_rates_q, dtype=jnp.float64)
 
         # eta_fac = ombh2 / 0.02242. LINX's baryon mass assumes a fixed
         # Y_p_0 = 0.247 and T_CMB = 2.7255 K (const.py:48-59), which is its
@@ -319,7 +315,7 @@ class LinxBBN(Theory):
             rho_NP_vec,
             P_NP_vec,
             Neff_vec,
-        ) = self._bkg(jnp.asarray(dNeff))
+        ) = self._bkg(jnp.asarray(dNeff, dtype=jnp.float64))
 
         # t_vec/a_vec must be passed explicitly, otherwise AbundanceModel runs
         # two extra ODE solves to recompute them (abundances.py:215-219).
@@ -330,8 +326,8 @@ class LinxBBN(Theory):
             P_NP_vec,
             t_vec=t_vec,
             a_vec=a_vec,
-            eta_fac=jnp.asarray(eta_fac),
-            tau_n_fac=jnp.asarray(tau_n_fac),
+            eta_fac=jnp.asarray(eta_fac, dtype=jnp.float64),
+            tau_n_fac=jnp.asarray(tau_n_fac, dtype=jnp.float64),
             nuclear_rates_q=nuclear_rates_q,
             rtol=self.rtol,
             atol=self.atol,
