@@ -74,7 +74,10 @@ takes about a minute.
 `dNeff_convention` defaults to `"init"`: the sampled `dNeff` is LINX's native
 ΔN_eff at the start of the integration (T ≈ 8.6 MeV), passed through directly.
 Set `dNeff_convention: final` to sample the post-annihilation ΔN_eff instead;
-the wrapper converts it using a slope calibrated at startup. Either way
+the wrapper converts it with the table in
+[`linx_cobaya/data/neff_init_to_final.txt`](linx_cobaya/data/neff_init_to_final.txt),
+made with LINX 34f4cbf. If the table does not match the installed LINX at
+startup, the wrapper warns and uses a two-point slope instead. Either way
 `Neff_BBN` is the value LINX produced and the Boltzmann code received.
 
 `Y_p` from LINX is the helium nucleon fraction. `YHe` is the mass fraction,

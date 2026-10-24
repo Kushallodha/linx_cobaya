@@ -366,6 +366,19 @@ def main():
         abs(linx._dNeff_slope - ratio) < 5e-3,
         f"LinxBBN calibrated slope = {linx._dNeff_slope:.5f}, measured = {ratio:.5f}",
     )
+    check(
+        "the shipped N_eff table matches this LINX and is used",
+        linx._neff_table is not None,
+        "falling back to the two-point slope; regenerate data/neff_init_to_final.txt",
+    )
+    # -2 lies below the table's N_eff range, so it exercises the extrapolation.
+    for target in (0.5, -2.0):
+        got = linx._compute(0.02242, target)["Neff_BBN"] - linx._Neff_sm
+        check(
+            f"'final' round trip: sampled dNeff = {target} gives that final Delta N_eff",
+            abs(got - target) < 1e-4,
+            f"final Delta N_eff = {got:.6f}",
+        )
 
     # --------------------------------------------------------------------------
     section("6. Robustness at extreme parameter values")

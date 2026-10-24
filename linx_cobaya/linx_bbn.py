@@ -22,6 +22,13 @@ from cobaya.theory import Theory
 # used only for the warm-up call.
 FIDUCIAL_OMBH2 = 0.02242
 
+# Delt_Neff_init -> final N_eff from LINX background solves; the file header
+# lists the LINX commit and settings it was made with.
+NEFF_TABLE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "data", "neff_init_to_final.txt"
+)
+NEFF_TABLE_TOL = 1e-4
+
 
 def _add_linx_path(linx_path):
     if linx_path:
@@ -73,9 +80,10 @@ class LinxBBN(Theory):
 
     Set ``dNeff_convention="final"`` to sample Delta N_eff in the post-e+e-
     sense the CMB literature uses instead. The class then converts to LINX's
-    native input by dividing by a slope ``d(Neff_final) / d(Delt_Neff_init)``.
-    The slope is measured at startup from background solves at
-    ``Delt_Neff_init`` = 0 and 1.
+    native input by inverting the table in ``data/neff_init_to_final.txt``.
+    At startup the table is checked against background solves at
+    ``Delt_Neff_init`` = 0 and 1; if it disagrees (another LINX version or
+    settings), the class warns and divides by the slope from those two solves.
 
     Either way ``Neff_BBN`` reports the value LINX actually produced and that
     the Boltzmann code actually receives, so the two codes are never
@@ -214,6 +222,7 @@ class LinxBBN(Theory):
         # _dNeff_slope is d(Neff_final) / d(Delt_Neff_init).
         self._Neff_sm = None
         self._dNeff_slope = 1.0
+        self._neff_table = None
 
         if not self.warmup and self.dNeff_convention == "final":
             self.log.info(
@@ -242,11 +251,13 @@ class LinxBBN(Theory):
             with contextlib.redirect_stdout(io.StringIO()):
                 _, _, _, _, _, _, Neff_vec = self._bkg(self._jnp.asarray(1.0))
             self._dNeff_slope = float(Neff_vec[-1]) - self._Neff_sm
+            self._neff_table = self._load_neff_table()
             self.log.info(
                 "dNeff_convention='final': sampled dNeff is the post-e+e- value; "
-                "Delt_Neff_init = dNeff / %.5f. (N_eff(SM) = %.5f.)",
-                self._dNeff_slope,
+                "Delt_Neff_init from %s. (N_eff(SM) = %.5f, slope %.5f.)",
+                "the shipped table" if self._neff_table else "the two-point slope",
                 self._Neff_sm,
+                self._dNeff_slope,
             )
         else:
             self.log.info(
@@ -272,11 +283,42 @@ class LinxBBN(Theory):
 
     # --- the actual computation -------------------------------------------
 
+    def _load_neff_table(self):
+        """Return (Delt_Neff_init, N_eff, N_eff at 0) from NEFF_TABLE, or None
+        if it does not match this LINX at Delt_Neff_init = 0 and 1."""
+        x, neff = np.loadtxt(NEFF_TABLE, usecols=(0, 1), unpack=True)
+        if np.any(np.diff(neff) <= 0):
+            raise RuntimeError(f"{NEFF_TABLE}: N_eff is not increasing.")
+        mismatch = max(
+            abs(np.interp(0.0, x, neff) - self._Neff_sm),
+            abs(np.interp(1.0, x, neff) - (self._Neff_sm + self._dNeff_slope)),
+        )
+        if mismatch > NEFF_TABLE_TOL:
+            self.log.warning(
+                "%s differs from this LINX by %.1e in N_eff; using the "
+                "two-point slope instead.",
+                NEFF_TABLE,
+                mismatch,
+            )
+            return None
+        return x, neff, float(np.interp(0.0, x, neff))
+
     def _delt_neff_init(self, dNeff):
         """Convert the sampled dNeff to LINX's native Delt_Neff_init."""
-        if self.dNeff_convention == "final":
+        if self.dNeff_convention == "init":
+            return dNeff
+        if self._neff_table is None:
             return dNeff / self._dNeff_slope
-        return dNeff
+        # Offset from the table's own value at 0, so dNeff = 0 maps to exactly 0.
+        x, neff, neff_0 = self._neff_table
+        target = neff_0 + dNeff
+        if neff[0] <= target <= neff[-1]:
+            return float(np.interp(target, neff, x))
+        # np.interp clamps at the ends; extrapolate the end segment instead.
+        i = 0 if target < neff[0] else -2
+        return float(
+            x[i] + (target - neff[i]) * (x[i + 1] - x[i]) / (neff[i + 1] - neff[i])
+        )
 
     def _compute(
         self,
