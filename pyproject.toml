@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "linx-cobaya"
+version = "0.1.0"
+description = "Cobaya theory that feeds LINX BBN predictions to CAMB or CLASS"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Kushal Lodha", email = "klodha@bu.edu"}]
+requires-python = ">=3.11"
+dependencies = [
+    "linx-bbn>=0.1.3",
+    "cobaya",
+    "camb",
+    "numpy",
+]
+
+[project.urls]
+Homepage = "https://github.com/Kushallodha/linx_cobaya"
+
+[tool.setuptools]
+packages = ["linx_cobaya"]
+
+[tool.setuptools.package-data]
+linx_cobaya = ["data/*.txt"]

@@ -10,20 +10,23 @@ for a BBN abundance likelihood.
 
 ## Install
 
-LINX is not pip-installable. Clone it separately and point `linx_path` at the
-checkout (the directory that contains the `linx` package).
+```bash
+pip install .    # from the root of this repo; pulls in linx-bbn>=0.1.3
+```
 
-Python dependencies of the wrapper:
+LINX is on PyPI as [`linx-bbn`](https://pypi.org/project/linx-bbn/) and imports
+as `linx`. Version 0.1.3 is the first with the fix for the normalisation of
+LINX's extra radiation, so older versions are not supported. To use a git
+checkout of LINX instead, point `linx_path` at it (the directory that contains
+the `linx` package); without `linx_path` the installed `linx` is used.
 
-- `cobaya`
-- `camb` (imported at startup for `camb.bbn.ypBBN_to_yhe`, including when the
-  Boltzmann solver in the run is CLASS)
-- `classy`, only if that run uses CLASS
-- `jax`, `numpy`, `scipy`
-- `diffrax`, `equinox`, `interpax`
+Dependencies installed with the wrapper: `linx-bbn`, `cobaya`, `camb`
+(imported at startup for `camb.bbn.ypBBN_to_yhe`, including when the Boltzmann
+solver in the run is CLASS) and `numpy`. Install `classy` yourself if the
+run uses CLASS.
 
-`python_path` must be the directory that contains this `linx_cobaya` package
-(the root of this repo).
+Without `pip install`, set `python_path` to the directory that contains this
+`linx_cobaya` package (the root of this repo).
 
 ```yaml
 python_path: /path/to/linx_cobaya
@@ -60,10 +63,12 @@ and one massive neutrino (`N_ncdm: 1`, `m_ncdm: 0.06`, `T_ncdm: 0.71611`).
 
 ```bash
 JAX_PLATFORMS=cpu \
-LINX_PATH=/path/to/LINX \
 LINX_COBAYA_CHECK_YAML=/path/to/test_linx.yaml \
 python linx_cobaya/check_linx_cobaya.py
 ```
+
+Set `LINX_PATH=/path/to/LINX` to check a git checkout instead of the installed
+`linx`.
 
 The yaml has to be a Cobaya run with `LinxBBN` and `camb`. The script checks
 that CAMB's `YHe` and `N_eff` match LINX. The first call compiles LINX and
@@ -76,7 +81,8 @@ takes about a minute.
 Set `dNeff_convention: final` to sample the post-annihilation ΔN_eff instead;
 the wrapper converts it with the table in
 [`linx_cobaya/data/neff_init_to_final.txt`](linx_cobaya/data/neff_init_to_final.txt),
-made with LINX 34f4cbf. If the table does not match the installed LINX at
+made with LINX v0.1.3 (34f4cbf); the background code is unchanged in 0.1.4.
+If the table does not match the installed LINX at
 startup, the wrapper warns and uses a two-point slope instead. Either way
 `Neff_BBN` is the value LINX produced and the Boltzmann code received.
 

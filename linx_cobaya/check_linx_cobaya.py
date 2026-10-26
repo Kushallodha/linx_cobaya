@@ -1,13 +1,15 @@
 """
 Verification suite for the LINX <-> Cobaya coupling.
 
-The Boltzmann-solver checks use CAMB. Point it at a LINX checkout and a Cobaya
-yaml containing LinxBBN plus camb:
+The Boltzmann-solver checks use CAMB. Point it at a Cobaya yaml containing
+LinxBBN plus camb:
 
     JAX_PLATFORMS=cpu \\
-    LINX_PATH=/path/to/LINX \\
     LINX_COBAYA_CHECK_YAML=/path/to/camb.yaml \\
     python linx_cobaya/check_linx_cobaya.py
+
+The installed linx (pip install linx-bbn) is used unless LINX_PATH points at a
+LINX checkout.
 
 Section 7 needs a CLASS config and is skipped without one:
 
@@ -17,6 +19,7 @@ Each check prints PASS/FAIL; the script exits nonzero if any check fails.
 """
 
 import copy
+import importlib.util
 import os
 import sys
 import time
@@ -30,7 +33,8 @@ from cobaya.yaml import yaml_load_file
 PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PACKAGE_ROOT)
 
-LINX_PATH = os.environ.get("LINX_PATH", os.path.join(PACKAGE_ROOT, "LINX"))
+# Empty: use the installed linx.
+LINX_PATH = os.environ.get("LINX_PATH", "")
 TEST_YAML = os.environ.get(
     "LINX_COBAYA_CHECK_YAML",
     os.path.join(PACKAGE_ROOT, "examples", "camb.yaml"),
@@ -167,11 +171,14 @@ def run_class_checks():
 
 
 def main():
-    if not os.path.isdir(os.path.join(LINX_PATH, "linx")):
+    if LINX_PATH and not os.path.isdir(os.path.join(LINX_PATH, "linx")):
         sys.exit(
             f"LINX checkout not found at {LINX_PATH} (no 'linx' package inside).\n"
-            "Set LINX_PATH to the root of your LINX checkout."
+            "Set LINX_PATH to the root of your LINX checkout, or unset it to use "
+            "the installed linx."
         )
+    if not LINX_PATH and importlib.util.find_spec("linx") is None:
+        sys.exit("linx is not installed: pip install 'linx-bbn>=0.1.3', or set LINX_PATH.")
     if not os.path.exists(TEST_YAML):
         sys.exit(
             f"Check config not found at {TEST_YAML}.\n"
@@ -369,7 +376,8 @@ def main():
     check(
         "the shipped N_eff table matches this LINX and is used",
         linx._neff_table is not None,
-        "falling back to the two-point slope; regenerate data/neff_init_to_final.txt",
+        "table used" if linx._neff_table is not None
+        else "falling back to the two-point slope; regenerate data/neff_init_to_final.txt",
     )
     # -2 lies below the table's N_eff range, so it exercises the extrapolation.
     for target in (0.5, -2.0):
